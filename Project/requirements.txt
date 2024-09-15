@@ -1,0 +1,6 @@
+requests
+tabulate
+sys
+pytest
+unittest
+mock
