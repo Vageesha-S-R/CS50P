@@ -4,3 +4,5 @@ sys
 pytest
 unittest
 mock
+fastf1
+matplotlib
