@@ -1,9 +1,11 @@
 import requests
 from tabulate import tabulate
 import sys
+import matplotlib.pyplot as plt
+import fastf1.plotting
 
 def main():
-    functions = [{"functions": "Driver Standings", "code": "a"}, {"functions": "Race Result", "code": "b"}]
+    functions = [{"functions": "Driver Standings", "code": "a"}, {"functions": "Race Result", "code": "b"},{"functions":"Position changes during a race","code":"c"}]
     print(tabulate(functions, headers="keys", tablefmt="fancy_grid"))
     code = input("Select any function by typing its code: ").strip().lower()
     if code == "a":
@@ -16,6 +18,10 @@ def main():
         result, circuit_name = race_result(year,round_num)
         print(f"------Race Name: {circuit_name} ------")
         print_table(result)
+    elif code=="c":
+        year=get_year_input("Enter the F1 season year (2018 or later): ")
+        round_num=get_round_input("Enter the round:")
+        position_change(year,round_num)
     else:
         print("Invalid code. Please select a valid function.")
 
@@ -48,6 +54,36 @@ def race_result(year,round_num):
         records.append({"Position": s["position"],"Driver Name": f"{driver['givenName']} {driver['familyName']}","Points": s["points"]})
 
     return records, circuit_name
+
+def position_change(year,round_num):
+    fastf1.plotting.setup_mpl(mpl_timedelta_support=False, misc_mpl_mods=False, color_scheme='fastf1')
+    try:
+        session = fastf1.get_session(year, round_num, 'R')
+        session.load(telemetry=False, weather=False)
+
+        fig, ax = plt.subplots(figsize=(8.0, 4.9))
+        for drv in session.drivers:
+            drv_laps = session.laps.pick_driver(drv)
+            
+            if drv_laps.empty:
+                print(f"No laps recorded for driver {drv}. Skipping.")
+                continue
+
+            abb = drv_laps['Driver'].iloc[0]
+            style = fastf1.plotting.get_driver_style(identifier=abb, style=['color', 'linestyle'], session=session)
+            ax.plot(drv_laps['LapNumber'], drv_laps['Position'],label=abb, **style)
+        
+    except Exception as e:
+        print(f"Error while plotting data: {e}")
+
+    ax.set_ylim([20.5, 0.5])
+    ax.set_yticks([1, 5, 10, 15, 20])
+    ax.set_xlabel('Lap')
+    ax.set_ylabel('Position')
+    ax.legend(bbox_to_anchor=(1.0, 1.02))
+    plt.tight_layout()
+
+    plt.show()
 
 def get_year_input(prompt):
     while True:
